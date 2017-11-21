@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.25420.1
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SDK.Payment", "SDK.Payment\SDK.Payment.csproj", "{093658AB-8783-4996-BFC6-02D4F64A9C01}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SDK.Demo", "SDK.Demo\SDK.Demo.csproj", "{E037D542-6B62-4995-B516-596D996EE24C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{093658AB-8783-4996-BFC6-02D4F64A9C01}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{093658AB-8783-4996-BFC6-02D4F64A9C01}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{093658AB-8783-4996-BFC6-02D4F64A9C01}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{093658AB-8783-4996-BFC6-02D4F64A9C01}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E037D542-6B62-4995-B516-596D996EE24C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E037D542-6B62-4995-B516-596D996EE24C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E037D542-6B62-4995-B516-596D996EE24C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E037D542-6B62-4995-B516-596D996EE24C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

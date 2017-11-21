@@ -1,0 +1,143 @@
+﻿using SDK.Payment.Enum;
+using SDK.Payment.Payment;
+using SDK.Payment.Utility;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+
+namespace SDK.Demo.Controllers
+{
+    public class HomeController : Controller
+    {
+        public ActionResult Index()
+        {
+            return View();
+        }
+
+        string productname = "支付 SDK1.0 ";
+        decimal actualAmount = 0.01M;
+
+
+        #region 支付宝支付
+
+        #region 支付宝测试账号
+        string ALI_APP_ID = "201608040016****";
+        //RSA私钥 路径
+        string rsa_private_key = @"D:\alipaydev\rsa_private_key.pem";
+        //RSA支付宝公钥 路径
+        string alipay_rsa_public_key = @"D:\alipaydev\alipay_rsa_public_key.pem";
+
+
+        string ALI_NOTITY_URL = "http://www.songker.com/AlipayNotity";
+        string ALI_RETURN_URL = "http://www.songker.com/PaySuccess";
+        #endregion
+
+        public ActionResult AlipayDemo()
+        {
+            var orderNo = DateTime.Now.ToString("yyMMddfff");
+            //构造请求参数
+            object biz_content = new
+            {
+                out_trade_no = orderNo,
+                total_amount = actualAmount,
+                subject = productname + orderNo,
+                body = productname,
+                product_code = "FAST_INSTANT_TRADE_PAY",//固定值：PC电脑端支付为 FAST_INSTANT_TRADE_PAY，手机支付为 product_code，APP支付为 QUICK_MSECURITY_PAY
+                passback_params = "KaungPaySDK"
+            };
+
+            Alipay alipay = new Alipay(AlipayTradeTypeEnum.Website, ALI_APP_ID, rsa_private_key);
+            alipay.Notify_url = ALI_NOTITY_URL;
+            alipay.Return_url = ALI_RETURN_URL;
+            ViewBag.html = alipay.BuildFormHtml(biz_content.ToJson());
+
+            return View();
+        }
+
+        public ActionResult PaySuccess()
+        {
+            return View();
+        }
+
+
+        public ActionResult AlipayNotity()
+        {
+            Alipay alipay = new Alipay(alipay_rsa_public_key);
+
+            var result = alipay.GetPayNotityResult();
+            if (result != null && !string.IsNullOrWhiteSpace(result.OutTradeNo))
+            {
+                if (result.TradeStatus == "TRADE_SUCCESS")
+                {
+                    //交易支付成功 todo
+                }
+                else if (result.TradeStatus == "TRADE_CLOSED")
+                {
+                    //未付款交易超时关闭，或支付完成后全额退款
+                }
+                return Content("success");
+            }
+
+            return Content("fail");
+        }
+
+
+
+        /// <summary>
+        /// 通过商户号发起退款
+        /// </summary>
+        /// <param name="orderNo">商户订单号</param>
+        /// <returns></returns>
+        public ActionResult AlipayRefund(string orderNo)
+        {
+            Alipay alipay = new Alipay(AlipayTradeTypeEnum.Refund, ALI_APP_ID, rsa_private_key);
+
+            //构造请求参数
+            object biz_content = new
+            {
+                out_trade_no = orderNo,
+                refund_amount = actualAmount
+            };
+            var result = alipay.Refund(biz_content.ToJson());
+            return Content(result.alipay_trade_refund_response.msg);
+        }
+        #endregion
+
+
+
+        #region 微信支付
+        string WX_APP_ID = "wx******";
+        string WX_MCH_ID = "14836*****";
+        string WX_PAY_KEY = "*******************";
+        string WX_NOTITY_URL = "http://www.songker.com/WxpayNotity";
+
+        public ActionResult WxpayDemo()
+        {
+            return View();
+        }
+        public ActionResult WxpayJSAPI()
+        {
+            var orderNo = DateTime.Now.ToString("yyMMddfff");
+
+            Wxpay wxpay = new Wxpay(WxpayTradeTypeEnum.JSAPI, WX_APP_ID, WX_MCH_ID, WX_PAY_KEY, WX_NOTITY_URL);
+            Dictionary<string, string> param = new Dictionary<string, string>();
+            param.Add("openid", "o1UgGxEvCZlAKsBlG8dY9E3ysKG0");
+            param.Add("body", productname);
+            param.Add("out_trade_no", orderNo);
+            param.Add("total_fee", ((int)(actualAmount * 100)).ToString());
+            param.Add("spbill_create_ip", HTTPHelper.GetIP());
+
+            var jsApiParam = wxpay.UnifiedOrder(param);
+
+            return Json(jsApiParam);
+        }
+
+        public ActionResult WxpayNotity()
+        {
+            return Content("FAIL");
+        }
+        #endregion
+    }
+}
