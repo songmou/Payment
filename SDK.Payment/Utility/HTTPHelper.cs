@@ -157,7 +157,11 @@ namespace SDK.Payment.Utility
         public static string GetIP()
         {
             //如果客户端使用了代理服务器，则利用HTTP_X_FORWARDED_FOR找到客户端IP地址
-            string userHostAddress = HttpContext.Current.Request.ServerVariables["HTTP_X_FORWARDED_FOR"].ToString().Split(',')[0].Trim();
+            var UserIp = HttpContext.Current.Request.ServerVariables["HTTP_X_FORWARDED_FOR"];
+            string userHostAddress = "";
+            if (!string.IsNullOrEmpty(UserIp))
+                userHostAddress = UserIp.ToString().Split(',')[0].Trim();
+
             //否则直接读取REMOTE_ADDR获取客户端IP地址
             if (string.IsNullOrEmpty(userHostAddress))
             {

@@ -107,6 +107,7 @@
     <Content Include="Views\Home\Index.cshtml" />
     <Content Include="Views\Home\PaySuccess.cshtml" />
     <Content Include="Views\Home\WxpayDemo.cshtml" />
+    <Content Include="Views\Home\PayFail.cshtml" />
     <None Include="Web.Debug.config">
       <DependentUpon>Web.config</DependentUpon>
     </None>

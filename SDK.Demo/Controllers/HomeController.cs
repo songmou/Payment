@@ -11,6 +11,9 @@ namespace SDK.Demo.Controllers
 {
     public class HomeController : Controller
     {
+        //临时域名
+        static string domain = "http://25770073.ngrok.io";
+
         public ActionResult Index()
         {
             return View();
@@ -30,8 +33,8 @@ namespace SDK.Demo.Controllers
         string alipay_rsa_public_key = @"D:\alipaydev\alipay_rsa_public_key.pem";
 
 
-        string ALI_NOTITY_URL = "http://www.songker.com/AlipayNotity";
-        string ALI_RETURN_URL = "http://www.songker.com/PaySuccess";
+        string ALI_NOTITY_URL = domain + "/AlipayNotity";
+        string ALI_RETURN_URL = domain + "/PaySuccess";
         #endregion
 
         public ActionResult AlipayDemo()
@@ -56,10 +59,6 @@ namespace SDK.Demo.Controllers
             return View();
         }
 
-        public ActionResult PaySuccess()
-        {
-            return View();
-        }
 
 
         public ActionResult AlipayNotity()
@@ -106,18 +105,27 @@ namespace SDK.Demo.Controllers
         #endregion
 
 
+        public ActionResult PaySuccess()
+        {
+            return View();
+        }
+        public ActionResult PayFail()
+        {
+            return View();
+        }
 
         #region 微信支付
-        string WX_APP_ID = "wx******";
-        string WX_MCH_ID = "14836*****";
-        string WX_PAY_KEY = "*******************";
-        string WX_NOTITY_URL = "http://www.songker.com/WxpayNotity";
+
+        string WX_APP_ID = "wx*****";
+        string WX_MCH_ID = "14********";
+        string WX_PAY_KEY = "c9********";
+        string WX_NOTITY_URL = domain + "/WxpayNotity";
 
         public ActionResult WxpayDemo()
         {
             return View();
         }
-        public ActionResult WxpayJSAPI()
+        public ActionResult WxpayJsapi()
         {
             var orderNo = DateTime.Now.ToString("yyMMddfff");
 
@@ -131,12 +139,42 @@ namespace SDK.Demo.Controllers
 
             var jsApiParam = wxpay.UnifiedOrder(param);
 
-            return Json(jsApiParam);
+            return Content(jsApiParam);
+        }
+
+        public ActionResult WxpayNative()
+        {
+            var orderNo = DateTime.Now.ToString("yyMMddfff");
+
+            Wxpay wxpay = new Wxpay(WxpayTradeTypeEnum.NATIVE, WX_APP_ID, WX_MCH_ID, WX_PAY_KEY, WX_NOTITY_URL);
+            Dictionary<string, string> param = new Dictionary<string, string>();
+            param.Add("openid", "o1UgGxEvCZlAKsBlG8dY9E3ysKG0");
+            param.Add("body", productname);
+            param.Add("out_trade_no", orderNo);
+            param.Add("total_fee", ((int)(actualAmount * 100)).ToString());
+            param.Add("spbill_create_ip", HTTPHelper.GetIP());
+
+            var ImgSrc = wxpay.UnifiedOrder(param);
+
+            return Content(ImgSrc);
         }
 
         public ActionResult WxpayNotity()
         {
-            return Content("FAIL");
+            Wxpay wxpay = new Wxpay(WX_APP_ID, WX_MCH_ID, WX_PAY_KEY);
+            var result = wxpay.GetPayNotityResult();
+            if (result != null)
+            {
+                //支付成功(会出现多次) todo
+                return Content(ReturnXmlContent(true,"支付成功"));
+            }
+
+            return Content(ReturnXmlContent(false));
+        }
+
+        public string ReturnXmlContent(bool r, string message = "")
+        {
+            return @"<xml><return_code><![CDATA[" + (r ? "SUCCESS" : "FAIL") + "]]></return_code><return_msg><![CDATA[" + message + "]]></return_msg></xml>";
         }
         #endregion
     }

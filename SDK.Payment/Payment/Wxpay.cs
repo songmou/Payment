@@ -1,4 +1,5 @@
 ﻿using SDK.Payment.Enum;
+using SDK.Payment.Model;
 using SDK.Payment.Utility;
 using System;
 using System.Collections.Generic;
@@ -29,6 +30,14 @@ namespace SDK.Payment.Payment
             CHARTSET = charset;
         }
 
+        public Wxpay(string app_id, string mch_id, string pay_key, string charset = "utf-8")
+        {
+            APP_ID = app_id;
+            MCH_ID = mch_id;
+            PAY_KEY = pay_key;
+            CHARTSET = charset;
+        }
+
         /// <summary>
         /// 统一下单
         /// </summary>
@@ -36,10 +45,11 @@ namespace SDK.Payment.Payment
         /// <returns></returns>
         public string UnifiedOrder(Dictionary<string, string> param)
         {
-            string requestXml = this.BuildRequest(param);
-            string resultXml = HTTPHelper.Post("https://api.mch.weixin.qq.com/pay/unifiedorder", requestXml);
+            SortedDictionary<string, string> dicParam = CreateParameter(param);
 
-            var dic = FromXml(resultXml);
+            string resultXml = HTTPHelper.Post("https://api.mch.weixin.qq.com/pay/unifiedorder", BuildXmlDocument(dicParam));
+
+            var dic = FromXmlToList(resultXml);
 
             string returnCode = "";
             dic.TryGetValue("return_code", out returnCode);
@@ -65,24 +75,16 @@ namespace SDK.Payment.Payment
                 }
                 else if (TradeType == WxpayTradeTypeEnum.JSAPI)
                 {
-                    string appid = "";
-                    dic.TryGetValue("appid", out appid);
-                    string prepay_id = "";
-                    dic.TryGetValue("prepay_id", out prepay_id);
-
-                    string preString = CreateURLParamString(dic) + "&key=" + PAY_KEY;
-                    string sign = MD5Helper.Sign(preString, CHARTSET).ToUpper();
-
-                    var JsapiParam = new
-                    {
-                        appId = appid,
-                        timeStamp = GenerateTimeStamp(),
-                        nonceStr = Guid.NewGuid().ToString().Replace("-", ""),
-                        package = "prepay_id=" + prepay_id,
-                        signType = "MD5",
-                        paySign = sign
-                    };
-                    return JsapiParam.ToJson();
+                    var jsApiParam = new SortedDictionary<string, string>();
+                    jsApiParam.Add("appId", dic["appid"]);
+                    jsApiParam.Add("timeStamp", GenerateTimeStamp());
+                    jsApiParam.Add("nonceStr", GetNonceStr());
+                    jsApiParam.Add("package", "prepay_id=" + dic["prepay_id"]);
+                    jsApiParam.Add("signType", "MD5");
+                    string preString = CreateURLParamString(jsApiParam) + "&key=" + PAY_KEY;
+                    string signValue = MD5Helper.Sign(preString, CHARTSET).ToUpper();
+                    jsApiParam.Add("paySign", signValue);
+                    return jsApiParam.ToJson();
                 }
                 else
                     throw new Exception(" WAP 未实现");
@@ -93,16 +95,96 @@ namespace SDK.Payment.Payment
             return "error";
         }
 
-
-        private string BuildRequest(Dictionary<string, string> dic)
+        public WxpayResult GetPayNotityResult()
         {
-            SortedDictionary<string, string> dicParam = CreateParameter(dic);
+            string xmlRequest = GetPostString();
+            var param = FromXmlToList(xmlRequest);
 
-            string preString = CreateURLParamString(dicParam) + "&key=" + PAY_KEY;
-            string sign = MD5Helper.Sign(preString, CHARTSET).ToUpper();
-            dicParam.Add("sign", sign);
+            var price = param["total_fee"];
+            decimal TotalFee = 0M; decimal.TryParse(price, out TotalFee);
 
-            return BuildForm(dicParam);
+            WxpayResult result = null;
+
+            string returnCode = "";
+            param.TryGetValue("return_code", out returnCode);
+
+            if (returnCode == "SUCCESS")
+            {
+                var out_trade_no = param["out_trade_no"];
+                var queryParam = QueryOrderRecord(out_trade_no);
+                if (queryParam.ContainsKey("return_code") && queryParam["return_code"] == "SUCCESS"
+                    && queryParam.ContainsKey("result_code") && queryParam["result_code"] == "SUCCESS"
+                    && queryParam.ContainsKey("trade_state") && queryParam["trade_state"] == "SUCCESS")
+                {
+                    //签名校验
+                    if (GetSignString(param) == param["sign"])
+                    {
+                        result = new WxpayResult();
+                        result.OutTradeNo = out_trade_no;
+                        result.TradeStatus = param["return_code"];
+                        result.Trade_No = param["transaction_id"];
+                        result.TotalFee = TotalFee / 100;
+                        result.Parameter = param;
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// 查询微信支付交易的订单（自行判断返回参数）
+        /// </summary>
+        /// <param name="out_trade_no"></param>
+        /// <returns></returns>
+        public IDictionary<string, string> QueryOrderRecord(string out_trade_no)
+        {
+            SortedDictionary<string, string> param = new SortedDictionary<string, string>();
+            param.Add("appid", APP_ID);
+            param.Add("mch_id", MCH_ID);
+
+            param.Add("out_trade_no", out_trade_no);
+
+            param.Add("nonce_str", GetNonceStr());
+            param.Add("sign_type", "MD5");
+            param.Add("sign", GetSignString(param));
+
+            string resultXml = HTTPHelper.Post("https://api.mch.weixin.qq.com/pay/orderquery", BuildXmlDocument(param));
+            return FromXmlToList(resultXml);
+        }
+
+        /// <summary>
+        /// 获取post的流
+        /// </summary>
+        /// <returns></returns>
+        public string GetPostString()
+        {
+            //接收从微信后台POST过来的数据
+            System.IO.Stream stream = HttpContext.Current.Request.InputStream;
+            int count = 0;
+            byte[] buffer = new byte[1024];
+            System.Text.StringBuilder builder = new System.Text.StringBuilder();
+            while ((count = stream.Read(buffer, 0, 1024)) > 0)
+            {
+                builder.Append(System.Text.Encoding.UTF8.GetString(buffer, 0, count));
+            }
+            stream.Flush();
+            stream.Close();
+            stream.Dispose();
+
+            return builder.ToString();
+        }
+
+        /// <summary>
+        /// 获取Md5 签名
+        /// </summary>
+        /// <param name="dic"></param>
+        /// <returns></returns>
+        public string GetSignString(SortedDictionary<string, string> dic)
+        {
+            string preString = CreateURLParamString(dic) + "&key=" + PAY_KEY;
+            string signValue = MD5Helper.Sign(preString, CHARTSET).ToUpper();
+            return signValue;
         }
 
         private SortedDictionary<string, string> CreateParameter(Dictionary<string, string> dic)
@@ -110,7 +192,7 @@ namespace SDK.Payment.Payment
             SortedDictionary<string, string> param = new SortedDictionary<string, string>();
             param.Add("appid", APP_ID);//账号ID
             param.Add("mch_id", MCH_ID);//商户号
-            param.Add("nonce_str", Guid.NewGuid().ToString().Replace("-", ""));//随机字符串
+            param.Add("nonce_str", GetNonceStr());//随机字符串
 
             if (!string.IsNullOrWhiteSpace(NOTIFY_URL) && !dic.ContainsKey("notify_url"))
                 param.Add("notify_url", NOTIFY_URL);//通知地址
@@ -122,26 +204,12 @@ namespace SDK.Payment.Payment
                     param.Add(d.Key, d.Value);
             }
 
+            param.Add("sign", GetSignString(param));
+
             return param;
         }
 
-
-
-
-        private static string CreateURLParamString(SortedDictionary<string, string> dicArray)
-        {
-            StringBuilder prestr = new StringBuilder();
-            foreach (KeyValuePair<string, string> temp in dicArray.OrderBy(o => o.Key))
-            {
-                prestr.Append(temp.Key + "=" + temp.Value + "&");
-            }
-
-            int nLen = prestr.Length;
-            prestr.Remove(nLen - 1, 1);
-            return prestr.ToString();
-        }
-
-        private static string BuildForm(SortedDictionary<string, string> dicParam)
+        public static string BuildXmlDocument(IDictionary<string, string> dicParam)
         {
             StringBuilder sbXML = new StringBuilder();
             sbXML.Append("<xml>");
@@ -153,12 +221,28 @@ namespace SDK.Payment.Payment
             sbXML.Append("</xml>");
             return sbXML.ToString();
         }
-        private static SortedDictionary<string, string> FromXml(string xml)
+
+
+        private static string CreateURLParamString(SortedDictionary<string, string> dicArray)
+        {
+            StringBuilder prestr = new StringBuilder();
+            foreach (KeyValuePair<string, string> temp in dicArray.OrderBy(o => o.Key))
+            {
+                if (temp.Key != "sign" && !string.IsNullOrWhiteSpace(temp.Value))
+                    prestr.Append(temp.Key + "=" + temp.Value + "&");
+            }
+
+            int nLen = prestr.Length;
+            prestr.Remove(nLen - 1, 1);
+            return prestr.ToString();
+        }
+
+        private static SortedDictionary<string, string> FromXmlToList(string xml)
         {
             SortedDictionary<string, string> sortDic = new SortedDictionary<string, string>();
             if (string.IsNullOrEmpty(xml))
             {
-                throw new PayException("将空的xml串转换为WxPayData不合法!");
+                throw new PayException();
             }
 
             XmlDocument xmlDoc = new XmlDocument();
@@ -180,6 +264,10 @@ namespace SDK.Payment.Payment
         {
             TimeSpan ts = DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0, 0);
             return Convert.ToInt64(ts.TotalSeconds).ToString();
+        }
+        public static string GetNonceStr()
+        {
+            return Guid.NewGuid().ToString().Replace("-", "");
         }
     }
 }

@@ -34,6 +34,6 @@ namespace SDK.Payment.Model
         /// <summary>
         /// 其他额外参数
         /// </summary>
-        public Dictionary<string, string> Parameter { get; set; }
+        public IDictionary<string, string> Parameter { get; set; }
     }
 }

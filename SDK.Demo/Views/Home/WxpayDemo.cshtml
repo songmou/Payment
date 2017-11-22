@@ -5,19 +5,77 @@
     <meta name="viewport" content="width=device-width" />
     <title>WxpayDemo</title>
     <script src="http://libs.baidu.com/jquery/1.8.3/jquery.min.js"></script>
+    <script src="http://apps.bdimg.com/libs/jquery-qrcode/1.0.0/jquery.qrcode.min.js"></script>
     <script>
-        $.ajax({
-            url: '/Home/WxpayJSAPI',
-            type: 'POST',
-            data: {},
-            success: function (data) {
-                $('.box').html(JSON.stringify(data));
+        var wxjsapiparam;
+
+        function Btn_JSAPI()
+        {
+            $.ajax({
+                url: 'WxpayJSAPI',
+                type: 'POST',
+                data: {},
+                dataType: "json",
+                success: function (data) {
+                    //$('.box').html(JSON.stringify(data));
+                    wxjsapiparam = data;
+
+                    callpay();
+                }
+            });
+        }
+
+
+        function callpay() {
+            if (typeof WeixinJSBridge == "undefined") {
+                if (document.addEventListener) {
+                    document.addEventListener('WeixinJSBridgeReady', jsApiCall, false);
+                }
+                else if (document.attachEvent) {
+                    document.attachEvent('WeixinJSBridgeReady', jsApiCall);
+                    document.attachEvent('onWeixinJSBridgeReady', jsApiCall);
+                }
             }
-        });
+            else {
+                jsApiCall();
+            }
+        }
+
+        //调用微信JS api 支付
+        function jsApiCall() {
+            WeixinJSBridge.invoke('getBrandWCPayRequest', wxjsapiparam, function (res) {
+                //微信返回
+                WeixinJSBridge.log(res.err_msg);
+                if (res.err_msg == "get_brand_wcpay_request:ok") {
+                    //支付成功
+                    location.href = "PaySuccess";
+                } else {
+                    //支付取消等
+                    location.href = "PayFail";
+                }
+            });
+        }
+
+
+
+
+        function Btn_Native() {
+            $.ajax({
+                url: 'WxpayNative',
+                type: 'POST',
+                data: {},
+                success: function (data) {
+                    debugger;
+                    jQuery('.box').qrcode({ width: 200, height: 200, correctLevel: 0, text: data });
+                }
+            });
+        }
     </script>
 </head>
 <body>
-    <div class="box"> 
-    </div>
+    <input type="button" value="JSAPI(在微信中打开)" onclick="Btn_JSAPI()" />
+    <hr />
+    <input type="button" value="NATIVE" onclick="Btn_Native()" />
+    <div class="box"></div>
 </body>
 </html>
