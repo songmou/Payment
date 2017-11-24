@@ -51,11 +51,26 @@ namespace SDK.Payment.Payment
             App_id = app_id;
             Rsa_private_key = rsa_private_key;
 
-            Method = tradeType == AlipayTradeTypeEnum.Website ? "alipay.trade.page.pay" :
-                tradeType == AlipayTradeTypeEnum.APP ? "alipay.trade.app.pay" :
-                tradeType == AlipayTradeTypeEnum.Wap ? "alipay.trade.wap.pay" :
-                tradeType == AlipayTradeTypeEnum.Refund ? "alipay.trade.refund" : "";
-
+            switch (tradeType)
+            {
+                case AlipayTradeTypeEnum.Website:
+                    Method = "alipay.trade.page.pay";
+                    break;
+                case AlipayTradeTypeEnum.App:
+                    Method = "alipay.trade.app.pay";
+                    break;
+                case AlipayTradeTypeEnum.Wap:
+                    Method = "alipay.trade.wap.pay";
+                    break;
+                case AlipayTradeTypeEnum.Qrcode:
+                    Method = "alipay.trade.precreate";
+                    break;
+                case AlipayTradeTypeEnum.Refund:
+                    Method = "alipay.trade.refund";
+                    break;
+                default:
+                    break;
+            }
             Sign_type = sign_type;
             Charset = charset;
         }
@@ -103,7 +118,8 @@ namespace SDK.Payment.Payment
         public AlipayResult GetPayNotityResult()
         {
             Dictionary<string, string> forms = GetRequestParameter();
-            AlipayResult result = null;
+            AlipayResult result = new AlipayResult();
+            result.Parameter = forms;
 
             var flag = AlipaySignature.RSACheckV1(forms, Alipay_rsa_public_key, Charset);
             if (flag && forms.ContainsKey("total_amount"))
@@ -112,14 +128,10 @@ namespace SDK.Payment.Payment
                 decimal.TryParse(forms["total_amount"] ?? "", out total_amount);
                 if (total_amount > 0)
                 {
-                    result = new AlipayResult()
-                    {
-                        OutTradeNo = forms["out_trade_no"],
-                        Trade_No = forms["trade_no"],
-                        TotalFee = total_amount,
-                        TradeStatus = forms["trade_status"],
-                        Parameter = forms
-                    };
+                    result.OutTradeNo = forms["out_trade_no"];
+                    result.Trade_No = forms["trade_no"];
+                    result.TotalFee = total_amount;
+                    result.TradeStatus = forms["trade_status"];
                 }
             }
             return result;
@@ -151,7 +163,10 @@ namespace SDK.Payment.Payment
                 dic.Add("return_url", Return_url);
             }
 
-            if (TradeType == AlipayTradeTypeEnum.Wap || TradeType == AlipayTradeTypeEnum.Website || TradeType == AlipayTradeTypeEnum.APP)
+            if (TradeType == AlipayTradeTypeEnum.Wap 
+                || TradeType == AlipayTradeTypeEnum.Website 
+                || TradeType == AlipayTradeTypeEnum.App
+                || TradeType == AlipayTradeTypeEnum.Qrcode)
                 dic.Add("notify_url", Notify_url);
 
             #endregion

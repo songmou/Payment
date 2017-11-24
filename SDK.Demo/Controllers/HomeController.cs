@@ -12,7 +12,7 @@ namespace SDK.Demo.Controllers
     public class HomeController : Controller
     {
         //临时域名
-        static string domain = "http://25770073.ngrok.io";
+        static string domain = "http://d1cc0911.ngrok.io";
 
         public ActionResult Index()
         {
@@ -116,10 +116,12 @@ namespace SDK.Demo.Controllers
 
         #region 微信支付
 
-        string WX_APP_ID = "wx*****";
-        string WX_MCH_ID = "14********";
-        string WX_PAY_KEY = "c9********";
+        string WX_APP_ID = "wx2f3***";
+        string WX_MCH_ID = "14836****";
+        string WX_PAY_KEY = "c98da17154823f9b2a****";
         string WX_NOTITY_URL = domain + "/WxpayNotity";
+
+        string openid = "o1UgGxEvCZlAKsBlG8dY9E3ysKG0";
 
         public ActionResult WxpayDemo()
         {
@@ -131,7 +133,7 @@ namespace SDK.Demo.Controllers
 
             Wxpay wxpay = new Wxpay(WxpayTradeTypeEnum.JSAPI, WX_APP_ID, WX_MCH_ID, WX_PAY_KEY, WX_NOTITY_URL);
             Dictionary<string, string> param = new Dictionary<string, string>();
-            param.Add("openid", "o1UgGxEvCZlAKsBlG8dY9E3ysKG0");
+            param.Add("openid", openid);
             param.Add("body", productname);
             param.Add("out_trade_no", orderNo);
             param.Add("total_fee", ((int)(actualAmount * 100)).ToString());
@@ -148,7 +150,7 @@ namespace SDK.Demo.Controllers
 
             Wxpay wxpay = new Wxpay(WxpayTradeTypeEnum.NATIVE, WX_APP_ID, WX_MCH_ID, WX_PAY_KEY, WX_NOTITY_URL);
             Dictionary<string, string> param = new Dictionary<string, string>();
-            param.Add("openid", "o1UgGxEvCZlAKsBlG8dY9E3ysKG0");
+            param.Add("openid", openid);
             param.Add("body", productname);
             param.Add("out_trade_no", orderNo);
             param.Add("total_fee", ((int)(actualAmount * 100)).ToString());
@@ -159,14 +161,54 @@ namespace SDK.Demo.Controllers
             return Content(ImgSrc);
         }
 
+        public ActionResult WxpayMicropay(string auth_code)
+        {
+            var orderNo = DateTime.Now.ToString("yyMMddfff");
+
+            Wxpay wxpay = new Wxpay(WxpayTradeTypeEnum.MICROPAY, WX_APP_ID, WX_MCH_ID, WX_PAY_KEY);
+            Dictionary<string, string> param = new Dictionary<string, string>();
+            param.Add("auth_code", auth_code);
+            param.Add("body", productname);
+            param.Add("out_trade_no", orderNo);
+            param.Add("total_fee", ((int)(actualAmount * 100)).ToString());
+            param.Add("spbill_create_ip", HTTPHelper.GetIP());
+
+            var result = wxpay.GetMicropayResult(param);
+
+            string err_code = "";
+            result.Parameter.TryGetValue("err_code", out err_code);
+
+            #region 等待用户输入密码，循环5次查询订单的支付状态
+            int loop = 1;
+            Payment.Model.WxpayResult queryParam = null;
+            while (err_code == "USERPAYING" && loop < 5
+                && queryParam != null && queryParam.TradeStatus != "SUCCESS")
+            {
+                System.Threading.Thread.Sleep(8 * 1000);
+                loop++;
+
+                queryParam = wxpay.GetQueryOrderRecord(orderNo);
+            };
+            #endregion
+
+            //如果还是未支付成功状态,则撤销订单
+            if (result.TradeStatus != "SUCCESS"
+                && err_code == "USERPAYING" && queryParam.TradeStatus != "SUCCESS")
+            {
+
+            }
+
+            return Content(result.ToJson());
+        }
+
         public ActionResult WxpayNotity()
         {
             Wxpay wxpay = new Wxpay(WX_APP_ID, WX_MCH_ID, WX_PAY_KEY);
             var result = wxpay.GetPayNotityResult();
-            if (result != null)
+            if (result != null && result.TradeStatus == "SUCCESS")
             {
                 //支付成功(会出现多次) todo
-                return Content(ReturnXmlContent(true,"支付成功"));
+                return Content(ReturnXmlContent(true, "支付成功"));
             }
 
             return Content(ReturnXmlContent(false));

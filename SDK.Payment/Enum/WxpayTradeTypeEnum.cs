@@ -23,6 +23,10 @@ namespace SDK.Payment.Enum
         /// <summary>
         /// wap支付（浏览器调用微信app，H5支付）
         /// </summary>
-        WAP
+        WAP,
+        /// <summary>
+        /// 刷卡支付
+        /// </summary>
+        MICROPAY
     }
 }

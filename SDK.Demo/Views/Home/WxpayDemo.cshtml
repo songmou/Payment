@@ -66,7 +66,21 @@
                 data: {},
                 success: function (data) {
                     debugger;
-                    jQuery('.box').qrcode({ width: 200, height: 200, correctLevel: 0, text: data });
+                    $('.box').qrcode({ width: 200, height: 200, correctLevel: 0, text: data });
+                }
+            });
+        }
+
+
+
+        function Btn_Micropay() {
+            $.ajax({
+                url: 'WxpayMicropay',
+                type: 'POST',
+                data: { auth_code: $('.auth_code').val() },
+                success: function (data) {
+                    debugger;
+                    $('.box').html(data);
                 }
             });
         }
@@ -75,7 +89,9 @@
 <body>
     <input type="button" value="JSAPI(在微信中打开)" onclick="Btn_JSAPI()" />
     <hr />
-    <input type="button" value="NATIVE" onclick="Btn_Native()" />
+    <input type="button" value="NATIVE(扫码支付)" onclick="Btn_Native()" />
+    <hr />
+    <input type="text" class="auth_code" placeholder="授权码" /> <input type="button" value="Micropay(刷卡支付)" onclick="Btn_Micropay()" />
     <div class="box"></div>
 </body>
 </html>
