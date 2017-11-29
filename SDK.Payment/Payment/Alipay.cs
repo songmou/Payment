@@ -18,10 +18,10 @@ namespace SDK.Payment.Payment
     {
         private AlipayTradeTypeEnum TradeType;
 
-        private string Gateway = "https://openapi.alipay.com/gateway.do";
+        //private string Gateway = "https://openapi.alipay.com/gateway.do";
 
         //沙箱环境网关
-        //private string Gateway = "https://openapi.alipaydev.com/gateway.do";
+        private string Gateway = "https://openapi.alipaydev.com/gateway.do";
 
         private string App_id;
         private string Method;
@@ -62,7 +62,7 @@ namespace SDK.Payment.Payment
                 case AlipayTradeTypeEnum.Wap:
                     Method = "alipay.trade.wap.pay";
                     break;
-                case AlipayTradeTypeEnum.Qrcode:
+                case AlipayTradeTypeEnum.Scanpay:
                     Method = "alipay.trade.precreate";
                     break;
                 case AlipayTradeTypeEnum.Refund:
@@ -163,8 +163,8 @@ namespace SDK.Payment.Payment
                 dic.Add("return_url", Return_url);
             }
 
-            if (TradeType == AlipayTradeTypeEnum.Wap 
-                || TradeType == AlipayTradeTypeEnum.Website 
+            if (TradeType == AlipayTradeTypeEnum.Wap
+                || TradeType == AlipayTradeTypeEnum.Website
                 || TradeType == AlipayTradeTypeEnum.App
                 || TradeType == AlipayTradeTypeEnum.Qrcode)
                 dic.Add("notify_url", Notify_url);
@@ -198,12 +198,7 @@ namespace SDK.Payment.Payment
 
         }
 
-        /// <summary>
-        /// 退款
-        /// </summary>
-        /// <param name="biz_content"></param>
-        /// <returns></returns>
-        public AliRefundResult Refund(string biz_content)
+        public object GetResponseBody(string biz_content)
         {
             Biz_content = biz_content;
 
@@ -211,9 +206,23 @@ namespace SDK.Payment.Payment
 
             byte[] postData = Encoding.GetEncoding(this.Charset).GetBytes(HTTPHelper.BuildQuery(parameters, this.Charset));
             string body = HTTPHelper.Post(this.Gateway + "?charset=" + this.Charset, postData);
-            //string body = "{\"alipay_trade_refund_response\":{\"code\":\"10000\",\"msg\":\"Success\",\"buyer_logon_id\":\"son***@foxmail.com\",\"buyer_user_id\":\"2088502208231151\",\"fund_change\":\"Y\",\"gmt_refund_pay\":\"2017-11-16 18:44:04\",\"out_trade_no\":\"1711161729222966032610\",\"refund_fee\":\"0.01\",\"send_back_fee\":\"0.00\",\"trade_no\":\"2017111621001104150596631765\"},\"sign\":\"VlcsqsKXMVxu9nMncbun6mYVPNL62VdOlCWoqf2qBd1aGBADZfBrcB+etnjm0anWqxG/GD/MkETo4HEIgv60Xv/16AFMoQjEBkA5mvxv6NLPRRz6l1WLbUOML3Mt6YP47pRPZWTgsV0P0+hKSjygqYheRDukXXSXIdKqcxx4dsk=\"}";
+            Dictionary<string, object> result = JsonHelper.JsonToObject<dynamic>(body);
+            if (result != null && result.Count > 1 && result.ContainsKey("sign"))
+            {
+                return result.Where(q => q.Key != "sign").FirstOrDefault().Value;
+            }
 
-            var result = JsonHelper.JsonToObject<AliRefundResult>(body);
+            return null;
+        }
+
+        /// <summary>
+        /// 退款
+        /// </summary>
+        /// <param name="biz_content"></param>
+        /// <returns></returns>
+        public alipay_trade_refund_response Refund(string biz_content)
+        {
+            alipay_trade_refund_response result = GetResponseBody(biz_content) as alipay_trade_refund_response;
 
             return result;
         }

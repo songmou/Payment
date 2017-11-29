@@ -9,12 +9,6 @@ namespace SDK.Payment.Model
     /// <summary>
     /// 支付宝退款返回的model
     /// </summary>
-    public class AliRefundResult
-    {
-        public alipay_trade_refund_response alipay_trade_refund_response { get; set; }
-        public string sign { get; set; }
-    }
-
     public class alipay_trade_refund_response
     {
         /// <summary>

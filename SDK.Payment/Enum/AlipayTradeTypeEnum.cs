@@ -21,9 +21,13 @@ namespace SDK.Payment.Enum
         /// </summary>
         App,
         /// <summary>
-        /// 条码&二维码支付
+        /// 付钱码：条码&二维码支付
         /// </summary>
         Qrcode,
+        /// <summary>
+        /// 用户扫描支付
+        /// </summary>
+        Scanpay,
         /// <summary>
         /// 退款
         /// </summary>

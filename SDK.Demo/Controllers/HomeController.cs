@@ -12,7 +12,7 @@ namespace SDK.Demo.Controllers
     public class HomeController : Controller
     {
         //临时域名
-        static string domain = "http://d1cc0911.ngrok.io";
+        static string domain = "http://song.ngrok.xiaomiqiu.cn";
 
         public ActionResult Index()
         {
@@ -26,11 +26,11 @@ namespace SDK.Demo.Controllers
         #region 支付宝支付
 
         #region 支付宝测试账号
-        string ALI_APP_ID = "201608040016****";
+        string ALI_APP_ID = "201**";
         //RSA私钥 路径
-        string rsa_private_key = @"D:\alipaydev\rsa_private_key.pem";
+        string rsa_private_key = @"D:\Pay\alipaydev\rsa_private_key.pem";
         //RSA支付宝公钥 路径
-        string alipay_rsa_public_key = @"D:\alipaydev\alipay_rsa_public_key.pem";
+        string alipay_rsa_public_key = @"D:\Pay\alipaydev\alipay_rsa_public_key.pem";
 
 
         string ALI_NOTITY_URL = domain + "/AlipayNotity";
@@ -38,6 +38,15 @@ namespace SDK.Demo.Controllers
         #endregion
 
         public ActionResult AlipayDemo()
+        {
+            return View();
+        }
+
+        /// <summary>
+        /// 电脑网站支付
+        /// </summary>
+        /// <returns></returns>
+        public ActionResult AliWebsite()
         {
             var orderNo = DateTime.Now.ToString("yyMMddfff");
             //构造请求参数
@@ -47,18 +56,77 @@ namespace SDK.Demo.Controllers
                 total_amount = actualAmount,
                 subject = productname + orderNo,
                 body = productname,
-                product_code = "FAST_INSTANT_TRADE_PAY",//固定值：PC电脑端支付为 FAST_INSTANT_TRADE_PAY，手机支付为 product_code，APP支付为 QUICK_MSECURITY_PAY
+                product_code = "FAST_INSTANT_TRADE_PAY",//固定值：PC电脑端支付为 FAST_INSTANT_TRADE_PAY，手机支付为 QUICK_WAP_WAY，APP支付为 QUICK_MSECURITY_PAY
                 passback_params = "KaungPaySDK"
             };
 
             Alipay alipay = new Alipay(AlipayTradeTypeEnum.Website, ALI_APP_ID, rsa_private_key);
             alipay.Notify_url = ALI_NOTITY_URL;
             alipay.Return_url = ALI_RETURN_URL;
-            ViewBag.html = alipay.BuildFormHtml(biz_content.ToJson());
 
-            return View();
+            return Content(alipay.BuildFormHtml(biz_content.ToJson()));
         }
 
+
+        public ActionResult AliWap()
+        {
+            var orderNo = DateTime.Now.ToString("yyMMddfff");
+            //构造请求参数
+            object biz_content = new
+            {
+                out_trade_no = orderNo,
+                total_amount = actualAmount,
+                subject = productname + orderNo,
+                body = productname,
+                product_code = "QUICK_WAP_WAY",//固定值：PC电脑端支付为 FAST_INSTANT_TRADE_PAY，手机支付为 QUICK_WAP_WAY，APP支付为 QUICK_MSECURITY_PAY
+                passback_params = "KaungPaySDK"
+            };
+
+            Alipay alipay = new Alipay(AlipayTradeTypeEnum.Wap, ALI_APP_ID, rsa_private_key);
+            alipay.Notify_url = ALI_NOTITY_URL;
+            alipay.Return_url = ALI_RETURN_URL;
+
+            return Content(alipay.BuildFormHtml(biz_content.ToJson()));
+        }
+        public ActionResult AliApp()
+        {
+            var orderNo = DateTime.Now.ToString("yyMMddfff");
+            //构造请求参数
+            object biz_content = new
+            {
+                out_trade_no = orderNo,
+                total_amount = actualAmount,
+                subject = productname + orderNo,
+                body = productname,
+                product_code = "QUICK_MSECURITY_PAY",//固定值：PC电脑端支付为 FAST_INSTANT_TRADE_PAY，手机支付为 QUICK_WAP_WAY，APP支付为 QUICK_MSECURITY_PAY
+                passback_params = "KaungPaySDK"
+            };
+
+            Alipay alipay = new Alipay(AlipayTradeTypeEnum.App, ALI_APP_ID, rsa_private_key);
+            alipay.Notify_url = ALI_NOTITY_URL;
+
+            var result = alipay.GetParameter(biz_content.ToJson());
+            return Content(result.ToJson());
+        }
+        public ActionResult AliScanpay()
+        {
+            var orderNo = DateTime.Now.ToString("yyMMddfff");
+            //构造请求参数
+            object biz_content = new
+            {
+                out_trade_no = orderNo,
+                total_amount = actualAmount,
+                subject = productname + orderNo,
+                body = productname
+            };
+
+            Alipay alipay = new Alipay(AlipayTradeTypeEnum.Scanpay, ALI_APP_ID, rsa_private_key);
+            alipay.Notify_url = ALI_NOTITY_URL;
+
+            var body = alipay.GetResponseBody(biz_content.ToJson());
+            
+            return Content("请求出错");
+        }
 
 
         public ActionResult AlipayNotity()
@@ -100,7 +168,10 @@ namespace SDK.Demo.Controllers
                 refund_amount = actualAmount
             };
             var result = alipay.Refund(biz_content.ToJson());
-            return Content(result.alipay_trade_refund_response.msg);
+            if (result != null && result.code == "10000")
+                return Content("退款成功");
+            else
+                return Content("退款失败：" + result.msg);
         }
         #endregion
 
@@ -116,15 +187,15 @@ namespace SDK.Demo.Controllers
 
         #region 微信支付
 
-        string WX_APP_ID = "wx2f*******";
+        string WX_APP_ID = "wx2f306b**";
         string WX_MCH_ID = "1483*******";
-        string WX_PAY_KEY = "c98da17******************";
+        string WX_PAY_KEY = "c98da1*************************";
         string WX_NOTITY_URL = domain + "/WxpayNotity";
 
         string openid = "o1UgGxEvCZlAKsBlG8dY9E3ysKG0";
 
-        string SSLCERT_PATH = "D:\\Pay\\apiclient_cert.p12";
-        string SSLCERT_PASSWORD = "14****";
+        string SSLCERT_PATH = "D:\\Pay\\S201703010\\apiclient_cert.p12";
+        string SSLCERT_PASSWORD = "148*******";
 
         public ActionResult WxpayDemo()
         {
@@ -237,7 +308,7 @@ namespace SDK.Demo.Controllers
             }
             return Content(r.ToJson());
         }
-        
+
         /// <summary>
         /// 订单退款
         /// </summary>

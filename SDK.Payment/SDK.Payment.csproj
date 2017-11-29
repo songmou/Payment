@@ -42,7 +42,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Model\AliRefundResult.cs" />
+    <Compile Include="Model\AlipayResponseResult.cs" />
     <Compile Include="Model\WxRefundResult.cs" />
     <Compile Include="Payment\Alipay.cs" />
     <Compile Include="Enum\AlipayTradeTypeEnum.cs" />
