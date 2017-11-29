@@ -79,7 +79,28 @@
                 type: 'POST',
                 data: { auth_code: $('.auth_code').val() },
                 success: function (data) {
-                    debugger;
+                    $('.box').html(data);
+                }
+            });
+        }
+
+        function Btn_Reverse() {
+            $.ajax({
+                url: 'ReverseOrderRecord',
+                type: 'POST',
+                data: { orderNo: $('.Reverse_orderNo').val() },
+                success: function (data) {
+                    $('.box').html(data);
+                }
+            });
+        }
+
+        function Btn_Refund() {
+            $.ajax({
+                url: 'RefundOrderRecord',
+                type: 'POST',
+                data: { orderNo: $('.Refund_orderNo').val() },
+                success: function (data) {
                     $('.box').html(data);
                 }
             });
@@ -92,6 +113,10 @@
     <input type="button" value="NATIVE(扫码支付)" onclick="Btn_Native()" />
     <hr />
     <input type="text" class="auth_code" placeholder="授权码" /> <input type="button" value="Micropay(刷卡支付)" onclick="Btn_Micropay()" />
+    <hr />
+    <input type="text" class="Reverse_orderNo" placeholder="订单号" /> <input type="button" value="撤销订单" onclick="Btn_Reverse()" />
+    <hr />
+    <input type="text" class="Refund_orderNo" placeholder="订单号" /> <input type="button" value="退款" onclick="Btn_Refund()" />
     <div class="box"></div>
 </body>
 </html>

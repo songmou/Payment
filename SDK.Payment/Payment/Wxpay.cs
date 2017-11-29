@@ -13,7 +13,7 @@ namespace SDK.Payment.Payment
 {
     public class Wxpay
     {
-        private WxpayTradeTypeEnum TradeType = 0;
+        private WxpayTradeTypeEnum TradeType;
         private string PAY_KEY = "";
         private string APP_ID = "";
         private string MCH_ID = "";
@@ -45,6 +45,18 @@ namespace SDK.Payment.Payment
         /// <returns></returns>
         public string UnifiedOrder(Dictionary<string, string> param)
         {
+            #region 必填信息验证
+            if (!param.ContainsKey("out_trade_no"))
+            {
+                throw new PayException("缺少订单号");
+            }
+            if (!param.ContainsKey("total_fee"))
+            {
+                throw new PayException("缺少订单金额");
+            }
+            #endregion
+
+
             string gateway = "https://api.mch.weixin.qq.com/pay/unifiedorder";
 
             SortedDictionary<string, string> dicParam = CreateParameter(param);
@@ -77,7 +89,7 @@ namespace SDK.Payment.Payment
                 }
                 else if (TradeType == WxpayTradeTypeEnum.JSAPI)
                 {
-                    var jsApiParam = new SortedDictionary<string, string>();
+                    var jsApiParam = new Dictionary<string, string>();
                     jsApiParam.Add("appId", dic["appid"]);
                     jsApiParam.Add("timeStamp", GenerateTimeStamp());
                     jsApiParam.Add("nonceStr", GetNonceStr());
@@ -118,32 +130,30 @@ namespace SDK.Payment.Payment
             SortedDictionary<string, string> dicParam = CreateParameter(param);
             string resultXml = HTTPHelper.Post(gateway, BuildXmlDocument(dicParam));
             var dic = FromXmlToList(resultXml);
-            result.Parameter = dic;
 
-            string returnCode = "";
-            dic.TryGetValue("return_code", out returnCode);
 
-            if (returnCode == "SUCCESS")
+            //签名校验
+            if (dic.ContainsKey("sign") && GetSignString(dic) == dic["sign"])
             {
-                var out_trade_no = dic["out_trade_no"];
+                result.Parameter = dic;
 
-                var price = dic["total_fee"];
-                decimal TotalFee = 0M; decimal.TryParse(price, out TotalFee);
-
-                if (dic.ContainsKey("result_code") && dic["result_code"] == "SUCCESS"
-                    && dic.ContainsKey("trade_state") && dic["trade_state"] == "SUCCESS")
+                if (dic.ContainsKey("return_code") && dic["return_code"] == "SUCCESS"
+                    && dic.ContainsKey("result_code") && dic["result_code"] == "SUCCESS")
                 {
-                    //签名校验
-                    if (GetSignString(dic) == param["sign"])
+                    var out_trade_no = dic["out_trade_no"];
+
+                    var price = dic["total_fee"];
+                    decimal TotalFee = 0M; decimal.TryParse(price, out TotalFee);
+
+                    if (dic.ContainsKey("trade_state") && dic["trade_state"] == "SUCCESS")
                     {
                         result.OutTradeNo = out_trade_no;
-                        result.TradeStatus = returnCode;
+                        result.TradeStatus = dic["return_code"];
                         result.Trade_No = dic["transaction_id"];
                         result.TotalFee = TotalFee / 100;
                     }
                 }
             }
-
             return result;
         }
 
@@ -170,7 +180,7 @@ namespace SDK.Payment.Payment
             if (returnCode == "SUCCESS")
             {
                 var out_trade_no = param["out_trade_no"];
-                result = GetQueryOrderRecord(out_trade_no);
+                result = GetQueryOrder(out_trade_no);
             }
 
             return result;
@@ -183,7 +193,7 @@ namespace SDK.Payment.Payment
         /// <param name="out_trade_no">商户号</param>
         /// <param name="transaction_id">交易号</param>
         /// <returns></returns>
-        public WxpayResult GetQueryOrderRecord(string out_trade_no = "", string transaction_id = "")
+        public WxpayResult GetQueryOrder(string out_trade_no = "", string transaction_id = "")
         {
             SortedDictionary<string, string> param = new SortedDictionary<string, string>();
 
@@ -203,23 +213,135 @@ namespace SDK.Payment.Payment
 
             WxpayResult result = new WxpayResult();
             var queryParam = QueryOrderRecord(param);
-            result.Parameter = queryParam;
 
-            string returnCode = "";
-            queryParam.TryGetValue("return_code", out returnCode);
-            if (queryParam.ContainsKey("return_code") && queryParam["return_code"] == "SUCCESS"
-                                && queryParam.ContainsKey("result_code") && queryParam["result_code"] == "SUCCESS"
-                                && queryParam.ContainsKey("trade_state") && queryParam["trade_state"] == "SUCCESS")
+            //签名校验
+            if (queryParam.ContainsKey("sign") && GetSignString(queryParam) == queryParam["sign"])
             {
-                var price = queryParam["total_fee"];
-                decimal TotalFee = 0M; decimal.TryParse(price, out TotalFee);
+                result.Parameter = queryParam;
 
-                //签名校验
-                if (GetSignString(param) == param["sign"])
+                string returnCode = "";
+                queryParam.TryGetValue("return_code", out returnCode);
+                if (queryParam.ContainsKey("return_code") && queryParam["return_code"] == "SUCCESS"
+                                    && queryParam.ContainsKey("result_code") && queryParam["result_code"] == "SUCCESS"
+                                    && queryParam.ContainsKey("trade_state") && queryParam["trade_state"] == "SUCCESS")
                 {
+                    var price = queryParam["total_fee"];
+                    decimal TotalFee = 0M; decimal.TryParse(price, out TotalFee);
+
                     result.OutTradeNo = out_trade_no;
-                    result.TradeStatus = param["return_code"];
-                    result.Trade_No = param["transaction_id"];
+                    result.TradeStatus = queryParam["return_code"];
+                    result.Trade_No = queryParam["transaction_id"];
+                    result.TotalFee = TotalFee / 100;
+                }
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// 撤销订单
+        /// 支付交易返回失败或支付系统超时，调用该接口撤销交易。
+        /// 如果此订单用户支付失败，微信支付系统会将此订单关闭；如果用户支付成功，微信支付系统会将此订单资金退还给用户。
+        /// </summary>
+        /// <param name="out_trade_no"></param>
+        /// <param name="transaction_id"></param>
+        /// <returns></returns>
+        public bool ReverseOrder(string out_trade_no, string SSLCERT_PATH, string SSLCERT_PASSWORD)
+        {
+            SortedDictionary<string, string> param = new SortedDictionary<string, string>();
+
+            if (string.IsNullOrWhiteSpace(out_trade_no))
+            {
+                return false;
+            }
+
+            if (!string.IsNullOrWhiteSpace(out_trade_no))
+            {
+                param.Add("out_trade_no", out_trade_no);
+            }
+            //if (!string.IsNullOrWhiteSpace(transaction_id))
+            //{
+            //    param.Add("transaction_id", transaction_id);
+            //}
+
+            WxpayResult result = new WxpayResult();
+
+            param.Add("appid", APP_ID);
+            param.Add("mch_id", MCH_ID);
+
+            param.Add("nonce_str", GetNonceStr());
+            param.Add("sign_type", "MD5");
+            param.Add("sign", GetSignString(param));
+
+            string resultXml = HTTPHelper.Post("https://api.mch.weixin.qq.com/secapi/pay/reverse", BuildXmlDocument(param), SSLCERT_PATH, SSLCERT_PASSWORD);
+            var dic = FromXmlToList(resultXml);
+
+            //签名校验
+            if (dic.ContainsKey("sign") && GetSignString(dic) == dic["sign"])
+            {
+                result.Parameter = dic;
+
+                string returnCode = "";
+                dic.TryGetValue("return_code", out returnCode);
+                if (dic.ContainsKey("return_code") && dic["return_code"] == "SUCCESS"
+                       && dic.ContainsKey("result_code") && dic["result_code"] == "SUCCESS")
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public WxpayResult RefundOrder(Dictionary<string, string> param, string SSLCERT_PATH, string SSLCERT_PASSWORD)
+        {
+            #region 必填信息验证
+            if (!param.ContainsKey("transaction_id") && !param.ContainsKey("out_trade_no"))
+            {
+                throw new PayException("缺少订单号");
+            }
+            if (!param.ContainsKey("out_refund_no"))
+            {
+                throw new PayException("缺少退款订单号");
+            }
+            if (!param.ContainsKey("total_fee"))
+            {
+                throw new PayException("缺少订单总金额");
+            }
+            if (!param.ContainsKey("refund_fee"))
+            {
+                throw new PayException("缺少退款总金额");
+            }
+            #endregion
+
+            string gateway = "https://api.mch.weixin.qq.com/secapi/pay/refund";
+
+            WxpayResult result = new WxpayResult();
+
+            param.Add("appid", APP_ID);
+            param.Add("mch_id", MCH_ID);
+            param.Add("nonce_str", GetNonceStr());
+            param.Add("sign_type", "MD5");
+            param.Add("sign", GetSignString(param));
+
+            string resultXml = HTTPHelper.Post(gateway, BuildXmlDocument(param), SSLCERT_PATH, SSLCERT_PASSWORD);
+            var dic = FromXmlToList(resultXml);
+
+
+            //签名校验
+            if (dic.ContainsKey("sign") && dic["sign"] == GetSignString(dic))
+            {
+                result.Parameter = dic;
+
+                if (dic.ContainsKey("return_code") && dic["return_code"] == "SUCCESS"
+                    && dic.ContainsKey("result_code") && dic["result_code"] == "SUCCESS")
+                {
+                    var out_trade_no = dic["out_trade_no"];
+
+                    var price = dic["total_fee"];
+                    decimal TotalFee = 0M; decimal.TryParse(price, out TotalFee);
+
+                    result.OutTradeNo = out_trade_no;
+                    result.TradeStatus = dic["return_code"];
+                    result.Trade_No = dic["transaction_id"];
                     result.TotalFee = TotalFee / 100;
                 }
             }
@@ -271,14 +393,14 @@ namespace SDK.Payment.Payment
         /// </summary>
         /// <param name="dic"></param>
         /// <returns></returns>
-        public string GetSignString(SortedDictionary<string, string> dic)
+        public string GetSignString(IDictionary<string, string> dic)
         {
             string preString = CreateURLParamString(dic) + "&key=" + PAY_KEY;
             string signValue = MD5Helper.Sign(preString, CHARTSET).ToUpper();
             return signValue;
         }
 
-        private SortedDictionary<string, string> CreateParameter(Dictionary<string, string> dic)
+        private SortedDictionary<string, string> CreateParameter(IDictionary<string, string> dic)
         {
             if (string.IsNullOrWhiteSpace(APP_ID) || string.IsNullOrWhiteSpace(MCH_ID))
             {
@@ -326,7 +448,7 @@ namespace SDK.Payment.Payment
         }
 
 
-        private static string CreateURLParamString(SortedDictionary<string, string> dicArray)
+        private static string CreateURLParamString(IDictionary<string, string> dicArray)
         {
             StringBuilder prestr = new StringBuilder();
             foreach (KeyValuePair<string, string> temp in dicArray.OrderBy(o => o.Key))
@@ -340,9 +462,9 @@ namespace SDK.Payment.Payment
             return prestr.ToString();
         }
 
-        private static SortedDictionary<string, string> FromXmlToList(string xml)
+        private static IDictionary<string, string> FromXmlToList(string xml)
         {
-            SortedDictionary<string, string> sortDic = new SortedDictionary<string, string>();
+            IDictionary<string, string> sortDic = new SortedDictionary<string, string>();
             if (string.IsNullOrEmpty(xml))
             {
                 throw new PayException();

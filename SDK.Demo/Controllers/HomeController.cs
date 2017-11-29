@@ -116,17 +116,25 @@ namespace SDK.Demo.Controllers
 
         #region 微信支付
 
-        string WX_APP_ID = "wx2f3***";
-        string WX_MCH_ID = "14836****";
-        string WX_PAY_KEY = "c98da17154823f9b2a****";
+        string WX_APP_ID = "wx2f*******";
+        string WX_MCH_ID = "1483*******";
+        string WX_PAY_KEY = "c98da17******************";
         string WX_NOTITY_URL = domain + "/WxpayNotity";
 
         string openid = "o1UgGxEvCZlAKsBlG8dY9E3ysKG0";
+
+        string SSLCERT_PATH = "D:\\Pay\\apiclient_cert.p12";
+        string SSLCERT_PASSWORD = "14****";
 
         public ActionResult WxpayDemo()
         {
             return View();
         }
+
+        /// <summary>
+        /// 公众号支付
+        /// </summary>
+        /// <returns></returns>
         public ActionResult WxpayJsapi()
         {
             var orderNo = DateTime.Now.ToString("yyMMddfff");
@@ -144,13 +152,16 @@ namespace SDK.Demo.Controllers
             return Content(jsApiParam);
         }
 
+        /// <summary>
+        /// 扫码支付
+        /// </summary>
+        /// <returns></returns>
         public ActionResult WxpayNative()
         {
             var orderNo = DateTime.Now.ToString("yyMMddfff");
 
             Wxpay wxpay = new Wxpay(WxpayTradeTypeEnum.NATIVE, WX_APP_ID, WX_MCH_ID, WX_PAY_KEY, WX_NOTITY_URL);
             Dictionary<string, string> param = new Dictionary<string, string>();
-            param.Add("openid", openid);
             param.Add("body", productname);
             param.Add("out_trade_no", orderNo);
             param.Add("total_fee", ((int)(actualAmount * 100)).ToString());
@@ -161,6 +172,11 @@ namespace SDK.Demo.Controllers
             return Content(ImgSrc);
         }
 
+        /// <summary>
+        /// 刷卡支付
+        /// </summary>
+        /// <param name="auth_code"></param>
+        /// <returns></returns>
         public ActionResult WxpayMicropay(string auth_code)
         {
             var orderNo = DateTime.Now.ToString("yyMMddfff");
@@ -180,14 +196,14 @@ namespace SDK.Demo.Controllers
 
             #region 等待用户输入密码，循环5次查询订单的支付状态
             int loop = 1;
-            Payment.Model.WxpayResult queryParam = null;
+            Payment.Model.WxpayResult queryParam = new Payment.Model.WxpayResult();
             while (err_code == "USERPAYING" && loop < 5
-                && queryParam != null && queryParam.TradeStatus != "SUCCESS")
+                && queryParam.TradeStatus != "SUCCESS")
             {
-                System.Threading.Thread.Sleep(8 * 1000);
+                System.Threading.Thread.Sleep(5 * 1000);
                 loop++;
 
-                queryParam = wxpay.GetQueryOrderRecord(orderNo);
+                queryParam = wxpay.GetQueryOrder(orderNo);
             };
             #endregion
 
@@ -195,11 +211,58 @@ namespace SDK.Demo.Controllers
             if (result.TradeStatus != "SUCCESS"
                 && err_code == "USERPAYING" && queryParam.TradeStatus != "SUCCESS")
             {
-
+                var r = wxpay.ReverseOrder(orderNo, SSLCERT_PATH, SSLCERT_PASSWORD);
+                return Content("交易已撤销");
             }
 
+
+            if (result.TradeStatus == "SUCCESS" || queryParam.TradeStatus == "SUCCESS")
+                return Content("支付成功");
+            else
+                return Content("支付失败，请重新发起支付");
+        }
+
+        /// <summary>
+        /// 撤销订单
+        /// </summary>
+        /// <param name="orderNo"></param>
+        /// <returns></returns>
+        public ActionResult ReverseOrderRecord(string orderNo)
+        {
+            Wxpay wxpay = new Wxpay(WX_APP_ID, WX_MCH_ID, WX_PAY_KEY);
+            var r = wxpay.ReverseOrder(orderNo, SSLCERT_PATH, SSLCERT_PASSWORD);
+            if (r)
+            {
+                //撤销订单成功
+            }
+            return Content(r.ToJson());
+        }
+        
+        /// <summary>
+        /// 订单退款
+        /// </summary>
+        /// <param name="orderNo"></param>
+        /// <returns></returns>
+        public ActionResult RefundOrderRecord(string orderNo)
+        {
+            Wxpay wxpay = new Wxpay(WX_APP_ID, WX_MCH_ID, WX_PAY_KEY);
+
+            var refundNo = DateTime.Now.ToString("yyMMddfff");
+
+            Dictionary<string, string> param = new Dictionary<string, string>();
+            param.Add("out_trade_no", orderNo);
+            param.Add("out_refund_no", refundNo);
+            param.Add("total_fee", ((int)(actualAmount * 100)).ToString());
+            param.Add("refund_fee", ((int)(actualAmount * 100)).ToString());
+
+            var result = wxpay.RefundOrder(param, SSLCERT_PATH, SSLCERT_PASSWORD);
+            if (result.TradeStatus == "SUCCESS")
+            {
+                //退款成功
+            }
             return Content(result.ToJson());
         }
+
 
         public ActionResult WxpayNotity()
         {
