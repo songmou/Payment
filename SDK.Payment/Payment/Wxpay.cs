@@ -144,14 +144,11 @@ namespace SDK.Payment.Payment
 
                     var price = dic["total_fee"];
                     decimal TotalFee = 0M; decimal.TryParse(price, out TotalFee);
-
-                    if (dic.ContainsKey("trade_state") && dic["trade_state"] == "SUCCESS")
-                    {
-                        result.OutTradeNo = out_trade_no;
-                        result.TradeStatus = dic["return_code"];
-                        result.Trade_No = dic["transaction_id"];
-                        result.TotalFee = TotalFee / 100;
-                    }
+                    
+                    result.OutTradeNo = out_trade_no;
+                    result.TradeStatus = dic["return_code"];
+                    result.Trade_No = dic["transaction_id"];
+                    result.TotalFee = TotalFee / 100;
                 }
             }
             return result;
@@ -222,8 +219,8 @@ namespace SDK.Payment.Payment
                 string returnCode = "";
                 queryParam.TryGetValue("return_code", out returnCode);
                 if (queryParam.ContainsKey("return_code") && queryParam["return_code"] == "SUCCESS"
-                                    && queryParam.ContainsKey("result_code") && queryParam["result_code"] == "SUCCESS"
-                                    && queryParam.ContainsKey("trade_state") && queryParam["trade_state"] == "SUCCESS")
+                    && queryParam.ContainsKey("result_code") && queryParam["result_code"] == "SUCCESS"
+                    && queryParam.ContainsKey("trade_state") && queryParam["trade_state"] == "SUCCESS")
                 {
                     var price = queryParam["total_fee"];
                     decimal TotalFee = 0M; decimal.TryParse(price, out TotalFee);

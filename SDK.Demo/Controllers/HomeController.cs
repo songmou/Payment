@@ -26,7 +26,7 @@ namespace SDK.Demo.Controllers
         #region 支付宝支付
 
         #region 支付宝测试账号
-        string ALI_APP_ID = "201**";
+        string ALI_APP_ID = "2016080400161635";
         //RSA私钥 路径
         string rsa_private_key = @"D:\Pay\alipaydev\rsa_private_key.pem";
         //RSA支付宝公钥 路径
@@ -187,15 +187,15 @@ namespace SDK.Demo.Controllers
 
         #region 微信支付
 
-        string WX_APP_ID = "wx2f306b**";
-        string WX_MCH_ID = "1483*******";
-        string WX_PAY_KEY = "c98da1*************************";
+        string WX_APP_ID = "wx2f306bd45b100d13";
+        string WX_MCH_ID = "1483617922";
+        string WX_PAY_KEY = "c98da17154823f9b2adb14c2ce0cac87";
         string WX_NOTITY_URL = domain + "/WxpayNotity";
 
         string openid = "o1UgGxEvCZlAKsBlG8dY9E3ysKG0";
 
         string SSLCERT_PATH = "D:\\Pay\\S201703010\\apiclient_cert.p12";
-        string SSLCERT_PASSWORD = "148*******";
+        string SSLCERT_PASSWORD = "1483617922";
 
         public ActionResult WxpayDemo()
         {
