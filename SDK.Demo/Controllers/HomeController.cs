@@ -1,11 +1,8 @@
-﻿using SDK.Payment.Enum;
-using SDK.Payment.Model;
+﻿using SDK.Payment.Model;
 using SDK.Payment.Payment;
 using SDK.Payment.Utility;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Web;
 using System.Web.Mvc;
 
 namespace SDK.Demo.Controllers

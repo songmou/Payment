@@ -45,8 +45,6 @@
     <Compile Include="Model\IPayConfig.cs" />
     <Compile Include="Model\IPayResult.cs" />
     <Compile Include="Payment\Alipay.cs" />
-    <Compile Include="Enum\AlipayTradeTypeEnum.cs" />
-    <Compile Include="Enum\WxpayTradeTypeEnum.cs" />
     <Compile Include="Payment\PayException.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Utility\AlipayEncrypt.cs" />
