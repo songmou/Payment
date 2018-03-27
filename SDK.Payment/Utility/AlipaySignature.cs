@@ -9,24 +9,23 @@ using System.Threading.Tasks;
 
 namespace SDK.Payment.Utility
 {
-
     public class AlipaySignature
     {
         /** 默认编码字符集 */
         private static string DEFAULT_CHARSET = "utf-8";
 
-        public static string GetSignContent(IDictionary<string, string> parameters)
+        public static string GetSignContent(IDictionary<string, object> parameters)
         {
             // 第一步：把字典按Key的字母顺序排序
-            IDictionary<string, string> sortedParams = new SortedDictionary<string, string>(parameters);
-            IEnumerator<KeyValuePair<string, string>> dem = sortedParams.GetEnumerator();
+            IDictionary<string, object> sortedParams = new SortedDictionary<string, object>(parameters);
+            IEnumerator<KeyValuePair<string, object>> dem = sortedParams.GetEnumerator();
 
             // 第二步：把所有参数名和参数值串在一起
             StringBuilder query = new StringBuilder("");
             while (dem.MoveNext())
             {
                 string key = dem.Current.Key;
-                string value = dem.Current.Value;
+                string value = dem.Current.Value.ToString();
                 if (!string.IsNullOrEmpty(key) && !string.IsNullOrEmpty(value))
                 {
                     query.Append(key).Append("=").Append(value).Append("&");
@@ -37,7 +36,7 @@ namespace SDK.Payment.Utility
             return content;
         }
 
-        public static string RSASign(IDictionary<string, string> parameters, string privateKeyPem, string charset, string signType)
+        public static string RSASign(IDictionary<string, object> parameters, string privateKeyPem, string charset, string signType)
         {
             string signContent = GetSignContent(parameters);
 
@@ -49,7 +48,7 @@ namespace SDK.Payment.Utility
             return RSASignCharSet(data, privateKeyPem, charset, signType);
         }
         ///*
-        public static string RSASign(IDictionary<string, string> parameters, string privateKeyPem, string charset, bool keyFromFile, string signType)
+        public static string RSASign(IDictionary<string, object> parameters, string privateKeyPem, string charset, bool keyFromFile, string signType)
         {
             string signContent = GetSignContent(parameters);
 
@@ -142,9 +141,9 @@ namespace SDK.Payment.Utility
         }
 
 
-        public static bool RSACheckV1(IDictionary<string, string> parameters, string publicKeyPem, string charset)
+        public static bool RSACheckV1(IDictionary<string, object> parameters, string publicKeyPem, string charset)
         {
-            string sign = parameters["sign"];
+            string sign = parameters.TryGetString("sign");
 
             parameters.Remove("sign");
             parameters.Remove("sign_type");
@@ -152,9 +151,9 @@ namespace SDK.Payment.Utility
             return RSACheckContent(signContent, sign, publicKeyPem, charset, "RSA");
         }
 
-        public static bool RSACheckV1(IDictionary<string, string> parameters, string publicKeyPem)
+        public static bool RSACheckV1(IDictionary<string, object> parameters, string publicKeyPem)
         {
-            string sign = parameters["sign"];
+            string sign = parameters.TryGetString("sign");
 
             parameters.Remove("sign");
             parameters.Remove("sign_type");
@@ -163,9 +162,9 @@ namespace SDK.Payment.Utility
             return RSACheckContent(signContent, sign, publicKeyPem, DEFAULT_CHARSET, "RSA");
         }
 
-        public static bool RSACheckV1(IDictionary<string, string> parameters, string publicKeyPem, string charset, string signType, bool keyFromFile)
+        public static bool RSACheckV1(IDictionary<string, object> parameters, string publicKeyPem, string charset, string signType, bool keyFromFile)
         {
-            string sign = parameters["sign"];
+            string sign = parameters.TryGetString("sign");
 
             parameters.Remove("sign");
             parameters.Remove("sign_type");
@@ -173,9 +172,9 @@ namespace SDK.Payment.Utility
             return RSACheckContent(signContent, sign, publicKeyPem, charset, signType, keyFromFile);
         }
 
-        public static bool RSACheckV2(IDictionary<string, string> parameters, string publicKeyPem)
+        public static bool RSACheckV2(IDictionary<string, object> parameters, string publicKeyPem)
         {
-            string sign = parameters["sign"];
+            string sign = parameters.TryGetString("sign");
 
             parameters.Remove("sign");
             string signContent = GetSignContent(parameters);
@@ -183,9 +182,9 @@ namespace SDK.Payment.Utility
             return RSACheckContent(signContent, sign, publicKeyPem, DEFAULT_CHARSET, "RSA");
         }
 
-        public static bool RSACheckV2(IDictionary<string, string> parameters, string publicKeyPem, string charset)
+        public static bool RSACheckV2(IDictionary<string, object> parameters, string publicKeyPem, string charset)
         {
-            string sign = parameters["sign"];
+            string sign = parameters.TryGetString("sign");
 
             parameters.Remove("sign");
             string signContent = GetSignContent(parameters);
@@ -193,9 +192,9 @@ namespace SDK.Payment.Utility
             return RSACheckContent(signContent, sign, publicKeyPem, charset, "RSA");
         }
 
-        public static bool RSACheckV2(IDictionary<string, string> parameters, string publicKeyPem, string charset, string signType, bool keyFromFile)
+        public static bool RSACheckV2(IDictionary<string, object> parameters, string publicKeyPem, string charset, string signType, bool keyFromFile)
         {
-            string sign = parameters["sign"];
+            string sign = parameters.TryGetString("sign");
 
             parameters.Remove("sign");
             string signContent = GetSignContent(parameters);
@@ -238,7 +237,7 @@ namespace SDK.Payment.Utility
                     return bVerifyResultOriginal;
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 new PayException("RSACheckContent", ex);
                 return false;
@@ -329,12 +328,12 @@ namespace SDK.Payment.Utility
 
         }
 
-        public static string CheckSignAndDecrypt(IDictionary<string, string> parameters, string alipayPublicKey,
+        public static string CheckSignAndDecrypt(IDictionary<string, object> parameters, string alipayPublicKey,
                                              string cusPrivateKey, bool isCheckSign,
                                              bool isDecrypt)
         {
-            string charset = parameters["charset"];
-            string bizContent = parameters["biz_content"];
+            string charset = parameters.TryGetString("charset");
+            string bizContent = parameters.TryGetString("biz_content");
             if (isCheckSign)
             {
                 if (!RSACheckV2(parameters, alipayPublicKey, charset))
@@ -351,12 +350,12 @@ namespace SDK.Payment.Utility
             return bizContent;
         }
 
-        public static string CheckSignAndDecrypt(IDictionary<string, string> parameters, string alipayPublicKey,
+        public static string CheckSignAndDecrypt(IDictionary<string, object> parameters, string alipayPublicKey,
                                              string cusPrivateKey, bool isCheckSign,
                                              bool isDecrypt, string signType, bool keyFromFile)
         {
-            string charset = parameters["charset"];
-            string bizContent = parameters["biz_content"];
+            string charset = parameters.TryGetString("charset");
+            string bizContent = parameters.TryGetString("biz_content");
             if (isCheckSign)
             {
                 if (!RSACheckV2(parameters, alipayPublicKey, charset, signType, keyFromFile))
@@ -656,8 +655,9 @@ namespace SDK.Payment.Utility
                 }
                 catch (Exception ex)
                 {
+                    throw new PayException("LoadCertificateFile", ex);
                 }
-                return null;
+                //return null;
             }
         }
         private static RSACryptoServiceProvider LoadCertificateString(string strKey, string signType)

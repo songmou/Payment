@@ -42,21 +42,20 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Model\AlipayResponseResult.cs" />
-    <Compile Include="Model\WxRefundResult.cs" />
+    <Compile Include="Model\IPayConfig.cs" />
+    <Compile Include="Model\IPayResult.cs" />
     <Compile Include="Payment\Alipay.cs" />
     <Compile Include="Enum\AlipayTradeTypeEnum.cs" />
     <Compile Include="Enum\WxpayTradeTypeEnum.cs" />
-    <Compile Include="Model\AlipayResult.cs" />
-    <Compile Include="Model\PayResultBase.cs" />
-    <Compile Include="Model\WxpayResult.cs" />
     <Compile Include="Payment\PayException.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Utility\AlipayEncrypt.cs" />
     <Compile Include="Utility\AlipaySignature.cs" />
+    <Compile Include="Utility\DictionaryExtentions.cs" />
     <Compile Include="Utility\HTTPHelper.cs" />
     <Compile Include="Utility\JsonHelper.cs" />
-    <Compile Include="Utility\MD5Helper.cs" />
+    <Compile Include="Utility\HashHelper.cs" />
+    <Compile Include="Utility\ReflectionHelper.cs" />
     <Compile Include="Utility\RSACryptoServiceProviderExtension.cs" />
     <Compile Include="Payment\Wxpay.cs" />
   </ItemGroup>

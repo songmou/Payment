@@ -186,16 +186,16 @@ namespace SDK.Payment.Utility
         /// </summary>
         /// <param name="parameters">Key-Value形式请求参数字典</param>
         /// <returns>URL编码后的请求数据</returns>
-        public static string BuildQuery(IDictionary<string, string> parameters, string charset)
+        public static string BuildQuery(IDictionary<string, object> parameters, string charset)
         {
             StringBuilder postData = new StringBuilder();
             bool hasParam = false;
 
-            IEnumerator<KeyValuePair<string, string>> dem = parameters.GetEnumerator();
+            IEnumerator<KeyValuePair<string, object>> dem = parameters.GetEnumerator();
             while (dem.MoveNext())
             {
                 string name = dem.Current.Key;
-                string value = dem.Current.Value;
+                string value = dem.Current.Value.ToString();
                 // 忽略参数名或参数值为空的参数
                 if (!string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(value))
                 {
